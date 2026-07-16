@@ -8,7 +8,7 @@ func main() {
 
 	// 整形，
 	// 后面带的数如8，16，32，64，就是二进制存储位数
-	// uint也叫byte,int取决于设备
+	// uint也叫byte,int取决于设备的硬件
 	// 带u为无符号数，仅正数
 	var n1 uint8 = 2
 	var n2 uint16 = 2
