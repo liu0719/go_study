@@ -6,6 +6,7 @@ import (
 )
 
 // 结构体
+
 // type 结构体名 struct{}
 type Person struct {
 	// 结构体tag
