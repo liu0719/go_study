@@ -5,7 +5,7 @@ import "fmt"
 // 流程控制语句
 
 func main() {
-	// if-else  , &&并 ,  ||或
+	// if-else  , &&并 ,  ||或，
 	var age int
 	fmt.Println("请输入你的年龄:")
 	n, err := fmt.Scanf("%v", &age)
