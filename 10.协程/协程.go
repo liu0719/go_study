@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+// 默认chan长度为0
+// 全局变量的chan可以用来接收各个协程的参数
+var moneyChan = make(chan float64)
+
 // 协程
 
 // 全局变量用来同步协程和主程序
@@ -19,10 +23,11 @@ func sing(wait *sync.WaitGroup) {
 	defer wait.Done()
 }
 
-func shopping(name string, wait *sync.WaitGroup) {
+func shopping(name string, money float64, wait *sync.WaitGroup) {
 	fmt.Println(name, "开始购物")
 	time.Sleep(time.Second * 1)
 	fmt.Println(name, "购物结束")
+	moneyChan<-money
 	defer wait.Done()
 }
 
@@ -37,16 +42,20 @@ func main() {
 	go sing(&wait)
 	go sing(&wait)
 	go sing(&wait)
-	wait.Wait()
+	wait.Wait() 
 	fmt.Println("主线程结束")
 
 	// 添加wait
 	wait.Add(3)
 	startTime := time.Now()
-	go shopping("张三", &wait)
-	go shopping("李四", &wait)
-	go shopping("王五", &wait)
+	go shopping("张三",2 ,&wait)
+	go shopping("李四", 3,&wait)
+	go shopping("王五", 5,&wait)
 	fmt.Println("购买完成", time.Since(startTime))
+
+	for{
+		fmt.Println(<-moneyChan)
+	}
 
 	//会等到wait为0，才继续执行
 	wait.Wait()
