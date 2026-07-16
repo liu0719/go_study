@@ -22,7 +22,7 @@ func main() {
 	arr1[2] = 99
 	fmt.Println(arr1)
 
-	// 数组长度是死的，不能改，切片可以
+	// 数组长度是死的，不能改，切片可以，
 	var list1 []string
 	list1 = append(list1, "你好")
 	list1 = append(list1, "我叫张三")
