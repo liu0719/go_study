@@ -11,7 +11,7 @@ func say_hello() {
 	fmt.Println("hello")
 }
 
-// 函数有限个参，无返回值
+// 函数有限个参，无返回值，
 func printlimit(a int, b int) {
 	fmt.Println(a, b)
 }
