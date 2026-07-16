@@ -23,7 +23,7 @@ func main() {
 	// 输入
 	fmt.Print("请输入文本\n")
 	var name string = ""
-	n, err := fmt.Scanf("%s", &name) //n为布尔，err报错内容
+	n, err := fmt.Scanf("%s", &name) //n为布尔值，err报错内容
 	fmt.Printf("你输入的是{%v}\n", name)
 	fmt.Println(n, err)
 }
