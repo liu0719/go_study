@@ -5,9 +5,7 @@ import "fmt"
 // 接口
 
 // 唱歌接口
-// 实现接口：
-// 一个类型实现了接口的所有方法
-// 即实现了该接口
+// 实现接口：一个类型实现了接口的所有方法，即实现了该接口
 type SingInterface interface {
 	Sing()
 	GetName() string //返回值也要写上，写全
