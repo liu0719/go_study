@@ -65,7 +65,7 @@ func main() {
 	flag = false
 	fmt.Println(flag)
 
-	//只声明不赋值，自动默认值
+	//只声明不赋值，自动默认值，0，false,"",
 	var a1 int
 	var a2 float32
 	var a3 string
