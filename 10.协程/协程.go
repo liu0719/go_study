@@ -23,6 +23,7 @@ func sing(wait *sync.WaitGroup) {
 	defer wait.Done()
 }
 
+// 购物函数，把钱写入管道内
 func shopping(name string, money float64, wait *sync.WaitGroup) {
 	fmt.Println(name, "开始购物")
 	time.Sleep(time.Second * 1)
@@ -40,7 +41,7 @@ func main() {
 	wait.Add(4)
 	go sing(&wait)
 	go sing(&wait)
-	go sing(&wait)
+	go sing(&wait) 
 	go sing(&wait)
 	wait.Wait()
 	fmt.Println("主线程结束")
@@ -51,13 +52,23 @@ func main() {
 	go shopping("张三", 2, &wait)
 	go shopping("李四", 3, &wait)
 	go shopping("王五", 5, &wait)
-	fmt.Println("购买完成", time.Since(startTime))
+	// 这里设置一个协程用来处理协程等待，和关闭参数管道
+	go func() {
+		// 会等到wait为0，才继续执行
+		wait.Wait()
+		close(moneyChan)
+	}()
 
-	for {
-		fmt.Println(<-moneyChan)
+	// 用来接收从协程里出来的参数
+	moneyList := []float64{}
+	// 管道里没有参数，for循环会卡在这里等参数
+	for money := range moneyChan {
+		fmt.Println(money)
+		moneyList = append(moneyList, money)
+
 	}
-
-	//会等到wait为0，才继续执行
-	wait.Wait()
+	// 输出
+	fmt.Println("购买完成", time.Since(startTime))
+	fmt.Println(moneyList)
 
 }

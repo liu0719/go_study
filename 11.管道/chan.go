@@ -3,10 +3,12 @@ package main
 import "fmt"
 
 // chan
-
+func Push(c chan string,str string) {
+	c<-str
+	fmt.Println(str,"已加入chan")
+}
 func main() {
-	var c chan int
-	c = make(chan int, 1)
-	c <- -8
-	fmt.Println(<-c)
+	var c chan string
+	c = make(chan string, 1)
+	c <- 
 }
