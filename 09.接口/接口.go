@@ -67,7 +67,7 @@ type Animal interface {
 type Empty interface{}
 
 // 空接口便捷写法，传入任何类型都可以
-// any就是interface{}
+// any就是interface{}，可以传入任何类型
 func Print(Empty interface{}) {
 	fmt.Println(Empty)
 }
