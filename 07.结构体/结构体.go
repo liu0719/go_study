@@ -11,7 +11,7 @@ import (
 type Person struct {
 	// 结构体tag
 	// json只会序列化能导出的属性，所以属性想序列化要大写
-	// 首字母大写 类型 `json:"json化后的名字"`  不想json化直接用"-"
+	// 首字母大写 类型 `json:"json化后的名字"`  不想json化直接用"-"，可以直接忽略该字段
 	Name    string  `json:"name"`
 	Age     int     `json:"age"`
 	Score   float32 `json:"score,omitempty"` //"score,omitempty"忽略空值
@@ -39,7 +39,7 @@ type Student struct {
 }
 
 func (s *Student) getName() string {
-	// 有继承关系
+	// 有继承
 	return s.person.Name
 }
 
