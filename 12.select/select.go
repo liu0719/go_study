@@ -14,6 +14,9 @@ var moneyChan = make(chan float64)
 var nameChan = make(chan string)
 var flagChan = make(chan bool)
 
+// 处理协程超时管道
+var donechan = make(chan any)
+
 // 全局变量用来同步协程和主程序
 
 // 购物函数，把钱写入管道内
@@ -24,6 +27,13 @@ func send(name string, money float64, wait *sync.WaitGroup) {
 	moneyChan <- money
 	nameChan <- name
 	defer wait.Done()
+}
+
+func event() {
+	fmt.Println("协程开始处理")
+	time.Sleep(time.Second * 2)
+	fmt.Println("协程处理完毕")
+	close(donechan)
 }
 
 // Goroutine是Go运行时管理的轻量级线程
@@ -85,5 +95,15 @@ func main() {
 	fmt.Println("购买完成", time.Since(startTime))
 	fmt.Println(moneylist)
 	fmt.Println(nameChan)
+	go event()
+
+	select {
+	case <-donechan:
+		fmt.Println("协程按时处理完成")
+	// 协程是两秒，若没在规定的时间内处理完成，就会超时，
+	// 这里不是在管道内读数据，是直接给定一个时间看管道是否关闭
+	case <-time.After(time.Second*3):
+		fmt.Println("协程处理超时")
+	}
 
 }
