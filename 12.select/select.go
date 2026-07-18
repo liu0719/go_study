@@ -49,20 +49,22 @@ func main() {
 	}()
 	namelist := []string{}
 	moneylist := []float64{}
-lable1:
-	for {
-		select {
-		case name := <-nameChan:
-			namelist = append(namelist, name)
-			fmt.Println(name, "已从chan中拿出，加到数组")
-		case money := <-moneyChan:
-			moneylist = append(moneylist, money)
-			fmt.Println(money, "已从chan中拿出，加到数组")
-		case <-flagChan:
-			break lable1
-		}
+	func() {
+		for {
+			// select用来异步的从多个channel里面去取数据
+			select {
+			case name := <-nameChan:
+				namelist = append(namelist, name)
+				fmt.Println(name, "已从chan中拿出，加到数组")
+			case money := <-moneyChan:
+				moneylist = append(moneylist, money)
+				fmt.Println(money, "已从chan中拿出，加到数组")
+			case <-flagChan:
+				return
+			}
 
-	}
+		}
+	}()
 
 	// go func() {
 	// 	for name := range nameChan {
