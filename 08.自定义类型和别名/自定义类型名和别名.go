@@ -18,7 +18,7 @@ const (
 
 )
 
-// 根据code的不同类型返回不同结果
+// 根据code的不同类型返回不同结果，
 func (c Code) getMsg() string {
 	switch c {
 	case SUCCESSCODE:
@@ -32,7 +32,7 @@ func (c Code) getMsg() string {
 	return "未知错误"
 }
 
-// 直接返回两个值
+// 直接返回两个值，
 func (c Code) ok() (Code, string) {
 	return c, c.getMsg()
 }
