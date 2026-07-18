@@ -59,6 +59,7 @@ func main() {
 	}()
 	namelist := []string{}
 	moneylist := []float64{}
+
 	func() {
 		for {
 			// select用来异步的从多个channel里面去取数据
@@ -95,14 +96,15 @@ func main() {
 	fmt.Println("购买完成", time.Since(startTime))
 	fmt.Println(moneylist)
 	fmt.Println(nameChan)
-	go event()
 
+	// 超时处理
+	go event()
 	select {
 	case <-donechan:
 		fmt.Println("协程按时处理完成")
 	// 协程是两秒，若没在规定的时间内处理完成，就会超时，
 	// 这里不是在管道内读数据，是直接给定一个时间看管道是否关闭
-	case <-time.After(time.Second*3):
+	case <-time.After(time.Second * 3):
 		fmt.Println("协程处理超时")
 	}
 
