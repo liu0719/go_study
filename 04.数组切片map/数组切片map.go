@@ -22,7 +22,7 @@ func main() {
 	arr1[2] = 99
 	fmt.Println(arr1)
 
-	// 数组长度是死的，不能改，切片可以，
+	// 数组长度是死的，不能改，切片可以
 	var list1 []string
 	list1 = append(list1, "你好")
 	list1 = append(list1, "我叫张三")
@@ -36,7 +36,7 @@ func main() {
 	var list2 []string
 	fmt.Println(list2 == nil) // true
 
-	//格式： make([]type, length, capacity)
+	//格式： make([]type, length, capacity )
 	list3 := make([]string, 5, 10)
 	list3[0] = "h"
 	list3[1] = "e"
