@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -142,6 +143,74 @@ func Call(obj any) {
 		})
 	}
 }
+
+// orm案例
+type ClassModels struct {
+	Id   int    `orm:"id"`
+	Name string `orm:"-"`
+}
+
+// 模拟orm
+func Find(obj any, query ...any) (err error, sql string) {
+	v := reflect.ValueOf(obj)
+	t := reflect.TypeOf(obj)
+	// 判断是否是结构体
+	if v.Kind() != reflect.Struct {
+		err = errors.New("不是结构体")
+		return
+	}
+	// 如果有查询条件，就拼接where语句
+	var where string
+	// 判断参数个数和查询数能不能对的上
+	if len(query) > 0 {
+		//query[0]是查询条件,query[1:]是查询条件的值
+		q := query[0]
+		// 断言为字符串，如果不是字符串，就报错,qs方便后续使用
+		qs, ok := q.(string)
+		if !ok {
+			err = errors.New("不是字符串,无法生成sql语句")
+			return
+		}
+		// 统计?的个数,如果?的个数和参数个数不一致，就报错
+		num := strings.Count(qs, "?")
+		if num != len(query)-1 {
+			err = errors.New("参数个数对不上")
+			return
+		}
+
+		// for循环遍历query[1:]，把query[1:]的值替换成?
+		for _, v := range query[1:] {
+			switch s := v.(type) {
+			case string:
+				// replace,参数1:总字符串,参数2:要替换的字符串,参数3:要换成的字符串,0参数4:替换几个
+				qs = strings.Replace(qs, "?", fmt.Sprintf("'%s'", s), 1)
+			case int:
+				qs = strings.Replace(qs, "?", fmt.Sprintf("'%d'", s), 1)
+			default:
+				err = errors.New("参数类型不支持")
+				return
+			}
+		}
+		// 拼接where语句
+		where = "where " + qs
+	}
+	// 拼接sql语句
+	// aim是要查询的字段
+	aim := ""
+	for i := 0; i < t.NumField(); i++ {
+		// orm:"-" 表示不查询这个字段
+		if t.Field(i).Tag.Get("orm") == "-" {
+			continue
+		}
+		// 有orm标签，就拼接orm标签的值，转小写
+		aim += strings.ToLower(t.Field(i).Name) + " "
+	}
+	// 表名是结构体名称的首字母小写+结构体名称的后5个字母小写
+	table := strings.ToLower(t.Name()[:5]) + "_" + strings.ToLower(t.Name()[5:])
+	// 拼接sql语句
+	sql = fmt.Sprintf("select %s from %s %s", aim, table, where)
+	return
+}
 func main() {
 	// 获取类型
 	GetType(123)
@@ -182,4 +251,25 @@ func main() {
 		Age:  25,
 	}
 	Call(&user1)
+
+	// orm例子
+	err, sql := Find(ClassModels{}, "name =?", "三年一班")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(sql)
+	// select name,id from class_models where name="三年一班"
+	err, sql = Find(ClassModels{}, "id=? and name=?", 1, "三年一班")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(sql)
+	// select name id from class_models where id =1 name="三年一班"
+	err, sql = Find(ClassModels{})
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(sql)
+	// select name id from class_models
+
 }
