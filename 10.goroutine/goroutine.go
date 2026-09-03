@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"runtime/trace"
 	"sync"
 	"time"
 )
@@ -35,13 +38,25 @@ func shopping(name string, money float64, wait *sync.WaitGroup) {
 // Goroutine是Go运行时管理的轻量级线程
 // 在go中，开启一个协程是非常简单的
 func main() {
+	// 可视化查看goroutine的执行
+	runtime.GOMAXPROCS(1) // 设置最大CPU数量为1
+	// 创建trace文件
+	f, err := os.Create("10.goroutine/trace.out")
+	if err != nil {
+		panic(err)
+	}
+	// 启动trace
+	err = trace.Start(f)
+	if err != nil {
+		panic(err)
+	}
 
 	wait := sync.WaitGroup{}
 	fmt.Println("主线程开始")
 	wait.Add(4)
 	go sing(&wait)
 	go sing(&wait)
-	go sing(&wait) 
+	go sing(&wait)
 	go sing(&wait)
 	wait.Wait()
 	fmt.Println("主线程结束")
@@ -70,5 +85,8 @@ func main() {
 	// 输出
 	fmt.Println("购买完成", time.Since(startTime))
 	fmt.Println(moneyList)
+
+	// 停止trace
+	trace.Stop()
 
 }
