@@ -3,8 +3,9 @@ package main
 // 变量定义
 
 import (
-	"basic/version"
 	"fmt"
+
+	"github.com/liu0719/go_study/basic/version"
 )
 
 func hello() {

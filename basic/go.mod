@@ -1,3 +1,3 @@
-module basic
+module github.com/liu0719/go_study/basic
 
-go 1.26.2
+go 1.24
