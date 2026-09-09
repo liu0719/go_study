@@ -2,7 +2,8 @@ package res
 
 import "github.com/gin-gonic/gin"
 
-// json封装，目的是为了实现业务更方便
+// json封装，目的是为了实现业务更方便，直接调用方法，清晰一点
+
 type Response struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
@@ -45,7 +46,7 @@ func Fail(c *gin.Context, Code int, msg string, data any) {
 	response(c, 0, msg, data)
 }
 
-// 
+//
 func FailWithCode(c *gin.Context, code int) {
 	// 用code码在codeMap内查询，查到了返回错误就行
 	msg, ok := CodeMap[code]
