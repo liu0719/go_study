@@ -21,7 +21,7 @@ func GetCurrentFilePath() string {
 func main() {
 	// 一次性文件读取
 	// 直接读取整个文件
-	databyte, err := os.ReadFile("16.文件操作\\hello.txt")
+	databyte, err := os.ReadFile("b16.file_operation\\hello.txt")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -31,7 +31,7 @@ func main() {
 	fmt.Println("当前文件的路径为：", GetCurrentFilePath())
 
 	// 文件太大就用open，只打开不读写
-	file, err := os.Open("16.文件操作\\hello.txt")
+	file, err := os.Open("b16.file_operation\\hello.txt")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -49,7 +49,7 @@ func main() {
 	// 带缓冲读
 	// 按行读取
 	// 这里要重新打开，不然会从上一次停止的点继续读
-	file, err = os.Open("16.文件操作\\hello.txt")
+	file, err = os.Open("b16.file_operation\\hello.txt")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -68,7 +68,7 @@ func main() {
 	file.Close()
 
 	// 按分隔符读取
-	file, err = os.Open("16.文件操作\\hello.txt")
+	file, err = os.Open("b16.file_operation\\hello.txt")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -95,7 +95,7 @@ func main() {
 	// 0777 表示三者均为读写执行的权限；
 	// 0764 表示所有者有读写执行（7=4+2+1）的权限，组有读写（6=4+2）的权限，其他用户则为只读（4=4）；
 
-	file, err = os.OpenFile("16.文件操作\\你好.txt", os.O_CREATE|os.O_WRONLY, 0666)
+	file, err = os.OpenFile("basic\\b16.file_operation\\hello.txt", os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		panic(err)
 	}
@@ -103,7 +103,7 @@ func main() {
 
 	bytedata, err := io.ReadAll(file)
 	if err != nil {
-		//panic: read 16.文件操作\你好.txt: Access is denied. 读操作被拒绝
+		//panic: read b16.file_operation\你好.txt: Access is denied. 读操作被拒绝
 		// panic(err)
 	}
 	fmt.Println(string(bytedata))
@@ -111,19 +111,19 @@ func main() {
 
 	// 全部写入
 	// 直接写入整个文件
-	err = os.WriteFile("16.文件操作\\一次全写.txt", []byte("我是一次性全部写入的文件内容"), 0666)
+	err = os.WriteFile("basic\\b16.file_operation\\once_write.txt", []byte("我是一次性全部写入的文件内容"), 0666)
 	if err != nil {
 		panic(err)
 	}
 
 	// 文件拷贝
 	// 读取文件
-	rfile, err := os.Open("D:\\33542\\Pictures\\塔菲.webp")
+	rfile, err := os.Open("b16.file_operation\\taffy.webp")
 	if err != nil {
 		panic(err)
 	}
 	// 写入文件
-	wfile, err := os.OpenFile("16.文件操作\\塔菲.webp", os.O_CREATE|os.O_WRONLY, 0666)
+	wfile, err := os.OpenFile("b16.file_operation\\taffy.webp", os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		panic(err)
 	}
@@ -133,7 +133,7 @@ func main() {
 	wfile.Close()
 
 	// 读取目录
-	dir, err := os.ReadDir("16.文件操作")
+	dir, err := os.ReadDir("b16.file_operation")
 	if err != nil {
 		panic(err)
 	}
