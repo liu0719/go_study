@@ -4,7 +4,8 @@
 
 - [Web 学习笔记](#web-学习笔记)
   - [目录](#目录)
-  - [环境安装](#环境安装)
+  - [工具](#工具)
+    - [Git](#git)
     - [MySQL](#mysql)
     - [Redis](#redis)
   - [RESTful API](#restful-api)
@@ -12,18 +13,27 @@
     - [HTTP 状态码](#http-状态码)
     - [URL 设计](#url-设计)
   - [MVC模式](#mvc模式)
-  - [项目目录结构](#项目目录结构)
+    - [项目目录结构](#项目目录结构)
   - [Go Web 框架](#go-web-框架)
-    - [Gin](#gin)
-      - [安装](#安装)
-      - [一个简单的 Gin 示例](#一个简单的-gin-示例)
-      - [常用功能](#常用功能)
-      - [路由示例](#路由示例)
-  - [总结](#总结)
+    - [go原生http包的缺点](#go原生http包的缺点)
+    - [gin](#gin)
 
 ---
 
-## 环境安装
+## 工具
+
+### Git
+git是用来控制版本的
+> 下载地址[git下载地址 ](https://git-scm.com/install/)
+#### git文件忽略跟踪
+在跟目录`.git`同级文件夹下新建`.gitignore`在该文件中配置要忽略的文件和文件夹
+> eg：
+```gitignore
+# 文件夹名，也可以用路径名
+.vscode
+.obsidian
+/docs/
+```
 
 ### MySQL
 
@@ -228,4 +238,4 @@ webdemo/
 - 参数解析格式复杂
 - 响应处理比较原始
 ### gin
-[详见gin内README](README_.md)
+[详见gin内README](README_gin.md)
