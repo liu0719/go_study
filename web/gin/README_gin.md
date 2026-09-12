@@ -411,8 +411,43 @@ fmt.Println("json数据为：", user, err)
         fmt.Println("json数据为：", header, err)
 ```
 ## 12.binding内置规则
+```go
+r.POST("json", func(c *gin.Context) {
+	// 一定要大写，不然获取不到
+	type User struct {
 
+		// bind内置规则
+		// 1.检验为空,和json的tag相同在后面加上bind的指定字段，来限制获取数据
+		Name    string `json:"name" binding:"required"`
 
+		Age     int    `json:"age"`
+
+		address string `json:"address"`
+
+	}
+
+	var user User
+
+	// 也会完成数据的校验
+
+	err := c.ShouldBindJSON(&user)
+
+	if err != nil {
+
+		c.String(200, "出现错误：", err.Error())
+
+		return
+
+	}
+
+	c.JSON(200, user)
+
+})
+```
+> 常用bind字段
+```go
+
+```
 
 ## 常用功能
 
