@@ -112,6 +112,13 @@ redis-cli
 ```
 
 ---
+### 接口测工具
+Postman，Apifox
+> 注意，接口能跑通的，前端页面不一定通，接口工具可以，前端不行
+1. GET请求带请求体(body),
+2. websocket带请求头
+
+```
 
 ## RESTful API
 

@@ -155,7 +155,7 @@ func main() {
 		前端单独启动一个系统和端口负责页面展示，后端的系统和端口负责数据
 2. 前端先弄好，后端统一部署
 		前端当作静态文件在后端中，由后端统一部署。
-## 7.响应文件
+## 7.下载文件
 用于浏览器直接请求找个接口唤起下载
 1. 在响应头内设置内容类型，再设置文件名，就能直接唤起浏览器下载
 2. 只能是get请求
@@ -180,13 +180,240 @@ c.File("static/photo.jpg")
     r.StaticFile("hello", "static/hello.txt")
 ```
 静态文件的路径不能再被路由使用，否则会报错
-## 9.参数
-> 查询参数
-`?key=xxx&name=xxx`,这种就是查询参数
+## 9.参数，文件上传
+1. 查询参数
+`?key=xxx&name=xxx&name=yyy`,这种就是查询参数
 查询参数不是get方法的专属
+```go
+// 拿过来默认为string
+name := c.Query("name")
+// 设置为默认值
+age := c.DefaultQuery("age", "-1")
+// 获取参数数组
+keyList := c.QueryArray("key")
 
-动态参数
-表单参数
+fmt.Println("name:", name)
+fmt.Println("age:", age)
+fmt.Println("keyList:", keyList)
+```
+输出为
+```json
+name: hello
+age: 100
+keyList: [234 789]
+```
+2. 动态参数
+	用户个人信息页面，他的路径：
+	```go
+	/users?id=123   //查询参数格式
+	/users/123      //动态参数
+	```
+3. 表单参数
+```go
+// 获取表单参数,PostForm分不清前端传没传
+        name := c.PostForm("name")
+        // GetPostForm会返回bool值，看看传了参数没有,可能用于选择更新
+        age, ok := c.GetPostForm("age")
+        // 这里处理一下没传的情况,设置一个默认值
+        if !ok {
+            age = "-1"
+        }
+        fmt.Println(name, age, ok)
+
+```
+4. 文件上传
+	传统的文件上传处理
+```go
+fileHeader, err := c.FormFile("file")
+        if err != nil {
+            panic(err)
+        }
+        fmt.Println(fileHeader.Filename) //文件名
+        fmt.Println(fileHeader.Size)     //文件大小
+
+        file, err := fileHeader.Open()
+        if err != nil {
+            panic(err)
+        }
+        byteData, _ := io.ReadAll(file)
+        // 可以写路径，开头不要加/，相对于项目根目录
+        err = os.WriteFile("static/hello.jpg", byteData, 0666)
+        fmt.Println(err)
+```
+	gin的文件上传处理
+```go
+err = c.SaveUploadedFile(fileHeader, "static/"+fileHeader.Filename)
+        fmt.Println(err)
+```
+5. 多文件上传
+```go
+form, err := c.MultipartForm()
+        if err != nil {
+            fmt.Println(err)
+        }
+        // form.File在这里是map[string][]*filerHeader
+        // 这个map的value是一个数组，数组内存放着真正的Header
+        for _, headers := range form.File {
+            // 再次循环这个数组就能得到真正的Header
+            for _, header := range headers {
+                c.SaveUploadedFile(header, "static/"+header.Filename)
+            }
+        }
+```
+## 10.数据传输方式的原始内容
+不同请求体对应的原始内容
+### 解决Body阅后即焚
+```go
+// 这个body本质上是从网络中拿的，阅后即焚，再读就读不到了
+byteData, _ := io.ReadAll(c.Request.Body)
+fmt.Println(string(byteData))
+// 解决Body阅后即焚的问题
+// 只有将body的内容加载到到内存,再用bytes的NewReader读取内存中的bytedata
+// 再用io.NopCloser()将*reader包装成关闭空操作的同类型，再赋值给Body，就能实现反复读取
+c.Request.Body = io.NopCloser(bytes.NewReader(byteData))
+```
+### form-data格式
+对应的消息头
+```go
+map[Accept:[*/*] 
+Accept-Encoding:[gzip, deflate, br]
+Connection:[keep-alive]
+Content-Length:[269]
+Content-Type:[multipart/form-data; boundary=--------------------------378516665593888438278638]
+User-Agent:[Apifox/1.0.0 (https://apifox.com)]]
+```
+消息体
+```go
+----------------------------378516665593888438278638
+Content-Disposition: form-data; name="name"
+
+张三
+----------------------------378516665593888438278638
+Content-Disposition: form-data; name="age"
+
+11
+----------------------------378516665593888438278638--
+```
+
+对应的分隔符就是`----------------------------378516665593888438278638`来分隔开每个form-data的参数。
+想要提取就需要按字符串分割，再按`Content-Disposition:`切割，就可以拿到想要的参数
+### x-www-form-url格式
+消息头中只有指定类型不同
+```go
+Content-Type:[application/x-www-form-urlencoded]
+```
+消息体
+```go
+
+name=%E5%BC%A0%E4%B8%89&age=11
+```
+获取参数
+```go
+//调用url包内的ParseQuery()
+values,err:=url.ParseQuery("?")
+        if err!=nil{
+            fmt.Println(err)
+        }
+        // 得到想要的参数
+        for k, v := range values {
+            fmt.Println(k,v)
+        }
+```
+### json格式
+json格式的消息头中只有指定的传输类型不同
+```go
+Content-Type:[application/json]
+```
+消息体
+```json
+{
+    "name":"张三",
+    "age":34,
+    "friend":["Tom","Jack","LiMing"],
+    "family":{
+        "dad":"liu",
+        "mom":"111",
+        "brother":"李四",
+    }
+}
+```
+## 11.bind参数绑定
+#### 查询参数
+`/user?id=xxx`
+```go
+type User struct {
+// 一定要大写，不然获取不到
+	Name string `form:"name"`
+	Age  int    `form:"age"`
+}
+var user User
+// 查询参数Query也会完成数据的校验
+err := c.ShouldBindQuery(&user)
+fmt.Println(user, err)
+```
+### 动态参数
+`user/:id/*action`
+```go
+type User struct {
+// 一定要大写，不然获取不到
+	Name   string `uri:"name"`
+	Id     int    `uri:"id"`
+	Action string `uri:"action"`
+}
+
+var user User
+// 动态参数用uri
+err := c.ShouldBindUri(&user)
+fmt.Println(user, err)
+```
+
+### 表单参数
+```go
+type User struct {
+// 一定要大写，不然获取不到
+	Name string `form:"name"`
+	Age  int    `form:"age"`
+}
+
+var user User
+// 也会完成数据的校验
+err := c.ShouldBind(&user)
+fmt.Println(user, err)
+```
+> 注意，不能解析x-www-form-urlencoded格式
+### json参数
+```go
+type User struct {
+// 一定要大写，不然获取不到
+	Name    string `json:"name"`
+	Age     int    `json:"age"`
+	address string `json:"address"`
+}
+
+var user User
+// 也会完成数据的校验
+err := c.ShouldBindJSON(&user)
+
+fmt.Println("json数据为：", user, err)
+```
+### header参数
+```go
+// 一定要大写，不然获取不到
+        type Header struct {
+        // 这里注意一定要和前端发来的数据名一样，有的中间有-
+            UserAgent string `header:"User-Agent"`
+            ContentType string `header:"Content-Type"`
+        }
+        var header Header
+        // 也会完成数据的校验
+        err := c.ShouldBindHeader(&header)
+
+        fmt.Println("json数据为：", header, err)
+```
+## 12.binding内置规则
+
+
+
 ## 常用功能
 
 - 路由注册：GET、POST、PUT、DELETE、PATCH
