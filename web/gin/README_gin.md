@@ -446,8 +446,59 @@ r.POST("json", func(c *gin.Context) {
 ```
 > 常用bind字段
 ```go
+// 不能为空,且不能没有这个字段
+`bind:"required"`
 
+// 针对字符串的长度
+min 最小长度，如：`bind:"min=5"`
+max 最大长度，如：`bind:"max=10"`
+len 长度，如：`bind:"len=6"`
+
+// 针对数字大小
+eq 等于 ：`binding:"eq=3"`
+ne 不等于：`binding:"ne=0"`
+gt 大于：`binding:"gt=10"`
+gte 大于等于：`binding:"gte=6"`
+lt 小于：`binding:"lt=4"`
+lte 小于等于：`binding:"lte=2"`
+
+// 针对同级字段
+eqfield 等于其他字段的值 ：`binding:"eqfield=password"`//字段要真是程序里的变量
+nefield 不等于其他字段的值
+
+// 忽略字段
+`binding="-"`或者不写
+
+//枚举 只能是red或green
+`binding:"oneof=red green"` //枚举就是指定的几种类型中的一种
+
+// 字符串
+`binding:"contains=hello"`//包含hello的字符串
+`binding:"excludes=tt"` //不包含tt的字符串
+`binding:"startwith=aa"` //以aa开头的字符串
+`binding:"endswith=bb"` //以bb结尾的字符串
+
+// 数组
+dive 校验数组中的每一项
+
+// 网络校验  
+//dive和required同时使用时，required只能检测到数组是否为空，看不到数组内部的每一个值为空
+// 可以通过min=1来控制字段长度解决
+ip 会检测该字段是否是一个ip地址
+ipv4
+ipv6
+uri
+url
+//uri在于i是统一资源标识符，可以唯一识别一个资源
+//url在于locater,是统一资源定位符，提供可找到该资源的确切路径
+
+// 日期验证,
+
+`binding:"datetime=2026-09-12"`
 ```
+## 13.编写bind规则
+### 错误信息显示中文
+> 可以直接搜`gin校验中文`
 
 ## 常用功能
 
