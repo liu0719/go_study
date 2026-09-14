@@ -6,12 +6,16 @@
   - [目录](#目录)
   - [工具](#工具)
     - [Git](#git)
+      - [git文件忽略跟踪](#git文件忽略跟踪)
     - [MySQL](#mysql)
     - [Redis](#redis)
+    - [接口测工具](#接口测工具)
   - [RESTful API](#restful-api)
     - [RESTful 核心原则](#restful-核心原则)
     - [HTTP 状态码](#http-状态码)
     - [URL 设计](#url-设计)
+  - [中间件](#中间件)
+  - [](#)
   - [MVC模式](#mvc模式)
     - [项目目录结构](#项目目录结构)
   - [Go Web 框架](#go-web-框架)
@@ -118,7 +122,7 @@ Postman，Apifox
 1. GET请求带请求体(body),
 2. websocket带请求头
 
-```
+
 
 ## RESTful API
 
@@ -174,10 +178,11 @@ REST 是一种软件架构风格，用来规范前后端 API 接口的设计和�
 
 ```http
 GET /api/users          # 获取所有用户
-GET /api/users/123      # 获取 ID 为 123 的用户
+GET /api/users/:id     # 获取 ID 为 id 的用户
 POST /api/users         # 创建新用户
-PUT /api/users/123      # 更新用户 123
-DELETE /api/users/123   # 删除用户 123
+PUT /api/users/:id      # 更新用户 123
+DELETE /api/users       # 批量删除用户
+DELETE /api/users/:id   # 删除指定单一用户
 ```
 
 > 不好的设计 ❌
@@ -193,7 +198,14 @@ GET /api/user/delete/123 # 混乱的结构
 - URL 中不要出现动词
 - 接口应面向资源，而不是行为
 - 结构应统一、语义清晰、易维护
+但是restful只是一个api规范，不是规定。可以用，但不强制用。
+1. 而且项目基本都是POST请求。
+2. 公司单位有防火墙，会拦截PUT,DELETE等请求
+---
 
+## 中间件
+在请求和响应中间的一堵墙
+![alt text](../static/images/中间件图解.png)
 
 ---
 ## MVC模式
