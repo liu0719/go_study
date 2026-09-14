@@ -1,5 +1,9 @@
 # Gin
 [Gin文档](https://gin-gonic.com/zh-cn/docs)
+## 0.go原生http包的缺点
+- 路由不明了，不区分请求方式，只分路径,还要在请求内部判断请求方法，get post
+- 参数解析格式复杂
+- 响应处理比较原始
 ## 1.安装
 ```bash
 go mod init webdemo
@@ -861,6 +865,65 @@ func main() {
     r:=gin.New()
 ```
 ---
-## 先到这里，以后遇到问题继续补充
+## 17.cors解决跨域
+[跨域问题简介](../web学习笔记/各种标准、配置/跨域.md)
+### 解决简单跨域
+*简单请求*
+1. 请求方法`GET`,`POST`,`HEAD`
+2. 请求头要符合cors安全规范，只要不手动修改请求头，一般都符合规范
+3. 请求头的`Content-Type`字段只能为以下三种
+`text/plain`,`multipart/form-data`,`application/x-www-form-urlencoded`
+
+请求头请求时会携带着origin
+![[请求头中的origin.png]]
+我们就需要在中间件中（在响应发送前）给响应头加上，`http://127.0.0.1:5500`可以换为任何源，`*`则表示允许跨域
+```go
+c.Header("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
+```
+### 解决复杂跨域请求
+除了上面的简单请求，其他都是复杂请求
+> *发送复杂请求，浏览器都会有预检请求*，关于预检请求
+
+1. 预检请求在实际跨域请求前，由浏览器自动发出
+2. 向服务器确认接下来是否允许该请求
+3. 基本流程：先发一个options,若通过继续发起实际跨域请求
+4. options请求通常有如下请求：
+
+| 请求头 | 含义 |
+|---|---|
+|`origin` |发起请求的源|
+|`access-control-request-method`| 实际的请求方法 |
+|``access-control-request-headers``|实际中自定义的请求头（若有的话）|
+要响应复杂请求，就需要服务器有options请求的处理，和对应相应头的允许
+也就是说，除了简单请求的`"Access-Control-Allow-Origin"`字段还需要其他字段
+1. *预检请求图解*
+![cors复杂跨域请求和预检请求](../../static/images/cors复杂跨域请求和预检请求.png)
+2. *预检后的复杂跨域请求图解*
+![[Pasted image 20260914222752.png]]
+
+以上图中的请求头，服务器必须添加，才能实现复杂跨域请求
+```go
+    // http响应头必须要在发送响应内容前设置。
+    // 也就是说要在处理响应内容前的中间件设置好,不能在c.Next()后,此时响应内容已经发送走
+    // 设置响应头的value字段必须严格相等,不然还是禁止跨域
+    // 应对复杂请求,复杂请求浏览器都会有预检请求
+    
+    //简单请求：添加允许跨境的源， "*"为全部允许
+    c.Header("Access-Control-Allow-Origin", "http://127.0.0.1:5500") 
+    //复杂请求，在简单请求的基础上添加下面的字段
+    //添加允许的请求方式，一定要有options(预检)，和自己想允许的方法
+    c.Header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,HEAD,OPTIONS,PATCH,TRACE") 
+    //添加想允许的请求头字段，这里的school就是
+    c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization,school")           
+    //设置多久时间内，浏览器再次发送复杂请求不需要再次预检
+    c.Header("Access-Control-Max-Age", "7200")
+```
+
+[go处理跨域具体案例](./15.cors跨域问题/cors.go)
+可以封装为一个中间件，，也就是cors包
+```bash
+go get github.com/gin-contrib/cors
+```
+
 
 ---

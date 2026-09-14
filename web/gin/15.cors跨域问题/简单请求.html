@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <button onclick="getStudent()">获取学生</button>
+    <div id="result"></div>
+
+    <script type="text/javascript">
+        async function getStudent() {
+            const url= "http://127.0.0.1/stu"
+            let res= await fetch(url,{
+                method:"GET",
+                headers:{
+                    // "hello":"你好",
+                    // "Content-Type":"application/json",
+                    "Content-Type":"application/x-www-form-urlencoded"
+                }
+            }
+
+            )
+            let data=await res.json()
+
+            // 获取显示区域
+            const resultDiv = document.getElementById('result');
+
+            // 将JSON数据转换为字符串并格式化显示
+            resultDiv.innerHTML = '<h3>返回的JSON数据：</h3>' +
+                                  '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        }
+    </script>
+</body>
+</html>
