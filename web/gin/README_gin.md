@@ -690,15 +690,177 @@ r:=gin.Default()
 // /api/login路径处理函数
 
 ```
+## 15.中间件
+gin的中间件类似函数递归调用，可以用`c.Next()`和`c.Abort()`来决定据徐进一层，还是在当前层就拦截住
+![gin中间件图解](../../static/images/gin中间件图解.png)
+### 局部中间件
+局部中间件只是相对于全局来说的，局部中间件只负责单一路径
+`c.Next()`就类似函数递归调用，会先进入下一层请求处理函数，最内层处理完后，再逐层返回
+`c.Abort()`就是拦截，在当前层截住请求，只在当前层处理完后返回，不再深入下一层。
+```go
+func Home(c *gin.Context) {
+    fmt.Println("home请求")
+    c.String(200, "home响应")
+}
+func M1(c *gin.Context) {
+    fmt.Println("m1请求")
+    // 拦截住，不会再往下走了，走完M1请求走M1响应
+    // c.Abort()
+    // Next方法会把函数分为两部分，强制进入下一个处理函数，就类似函数递归调用
+    // 分为请求部分和响应部分，走完Home之后再走相应部分
+    c.Next()
+    c.String(200, "M1响应")
+}
 
+func M2(c *gin.Context) {
+    // 请求部分在处理函数完成前，发送给服务器时处理
+    fmt.Println("m2请求")
+    // M1请求>M2请求>M2abort拦截，阻止往下走>M2响应>M1响应
+    c.Abort()
+    c.Next()
+    // 响应部分在处理函数完成后，返回给客户端时再处理
+    c.String(200, "M2响应")
+}
 
-## 常用功能
+func main() {
+    r := gin.Default()
+    // M1请求>Home>M1响应
+    r.GET("m1", M1, Home)
+    // M1请求>M2请求>Home>M2响应>M1响应，和主机之间7层王略结构通信类似
+    r.GET("m1m2", M1, M2, Home)
+    r.Run(":80")
+}
+```
 
-- 路由注册：GET、POST、PUT、DELETE、PATCH
-- 参数绑定：Query、Path、Body
-- JSON 响应：c.JSON()
-- 文件上传：c.PostForm()
-- 中间件：日志、鉴权、限流、跨域等
-- 
+### 全局中间件
+全局也就是路由组，给整个路由组加中间件
+```go
+package main
+import (
+    "fmt"
+    "github.com/gin-gonic/gin"
+)
+func ApiRouterGroup(r *gin.RouterGroup) {
+    r.GET("users", func(c *gin.Context) {
+        fmt.Println("Home")
+        c.String(200, "Home")
+    })
+    r.POST("users", func(c *gin.Context) {})
+    r.PUT("users", func(c *gin.Context) {})
+    r.DELETE("users", func(c *gin.Context) {})
+}
+func GM1(c *gin.Context) {
+    fmt.Println("GM1请求")
+    c.Next()
+    fmt.Println("GM1响应")
+    c.String(200, "GM1响应")
+}
+func GM2(c *gin.Context) {
+    fmt.Println("GM2请求")
+    // c.Abort()
+    c.Next()
+    fmt.Println("GM2响应")
+    c.String(200, "GM2响应")
+}
+func AuthMiddleWare(c *gin.Context) {
 
+    // 在这里可以拿header的token来确定权限，或者记录日志
 
+    // 进行拦截或者放行
+
+}
+
+func main() {
+    r := gin.Default()
+    // 用Group方法创建新的路由分组
+    g := r.Group("api")
+    g.Use(GM1, GM2)
+    // 再调用路由组函数处理新建的路由组。
+    ApiRouterGroup(g)
+    r.Run(":80")
+}
+```
+### 中间件传参
+1. 按一次请求的生命周期算，在当前的生命周期中创建的值`c.Set("key","value")`在后面任何一个周期中都可以访问到。
+2. 传参可以传任何值，因为有类型断言来控制数据类型，方便后续处理
+```go
+package main
+import (
+    "fmt"
+    "github.com/gin-gonic/gin"
+)
+type User struct {
+    Name string
+}
+func ApiRouterGroup(r *gin.RouterGroup) {
+    r.GET("users", func(c *gin.Context) {
+        fmt.Println("Home")
+        // 获取中间件的参数
+        value, exist := c.Get("GM1")
+        fmt.Println(value, exist)
+        // 对获取到的参数进行类型断言
+        _user, ok := c.Get("user")
+        if ok {
+            user, ok := _user.(User)
+            if ok {
+                fmt.Println(user.Name)
+            }
+        }
+        c.String(200, "Home")
+    })
+    r.POST("users", func(c *gin.Context) {})
+    r.PUT("users", func(c *gin.Context) {})
+    r.DELETE("users", func(c *gin.Context) {})
+}
+func GM1(c *gin.Context) {
+    fmt.Println("GM1请求")
+    //再在这里设置的参数，在这个请求往后的生命周期都是可以拿到的，GM2,Home,GM2响应，GM1响应都能拿到
+    c.Set("GM1", "我是GM1的数据")
+    // 可以传任何参数，因为支持类型断言
+    c.Set("user", User{Name: "不定积分"})
+    c.Next()
+    fmt.Println("GM1响应")
+    value, exist := c.Get("GM1")
+    fmt.Println(value, exist)
+    c.String(200, "GM1响应")
+}
+
+func GM2(c *gin.Context) {
+    fmt.Println("GM2请求")
+    value, exist := c.Get("GM1")
+    fmt.Println(value, exist)
+    c.Set("GM2", "我是GM2的数据")
+    // c.Abort()
+    c.Next()
+    fmt.Println("GM2响应")
+    value, exist = c.Get("GM1")
+    fmt.Println(value, exist)
+    c.String(200, "GM2响应")
+}
+func AuthMiddleWare(c *gin.Context) {
+    // 在这里可以拿header的token来确定权限，或者记录日志
+    // 进行拦截或者放行
+}
+func main() {
+    // Default方法其实就是调用New方法，然后使用了两个中间件logger(),recover(),分别负责日志，捕获panic.
+    // 如果用New()就没有这些东西，需要自己写
+    r := gin.Default()
+    // 用Group方法创建新的路由分组
+    g := r.Group("api")
+    g.Use(GM1, GM2)
+    // 再调用路由组函数处理新建的路由组。
+    ApiRouterGroup(g)
+    r.Run(":80")
+}
+```
+## 16.Default()和New()区别
+```go
+// Default方法其实就是调用New方法，然后使用了两个中间件logger(),recover(),分别负责日志，捕获panic.
+    // 如果用New()就没有这些东西，需要自己写
+    r := gin.Default()
+    r:=gin.New()
+```
+---
+## 先到这里，以后遇到问题继续补充
+
+---

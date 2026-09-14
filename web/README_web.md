@@ -170,7 +170,7 @@ REST 是一种软件架构风格，用来规范前后端 API 接口的设计和�
 
 > HTTP 状态码速查图
 
-![HTTP 状态码速查图](../static/images/image-1.png)
+![HTTP 状态码速查图](../static/images/http状态码图.png)
 
 ### URL 设计
 
@@ -205,7 +205,8 @@ GET /api/user/delete/123 # 混乱的结构
 
 ## 中间件
 在请求和响应中间的一堵墙
-![alt text](../static/images/中间件图解.png)
+![中间件图解](../static/images/中间件图解.png)
+gin的·中间件详见[gin中间件](./gin/README_gin.md##15.中间件)
 
 ---
 ## MVC模式
