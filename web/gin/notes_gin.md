@@ -899,7 +899,7 @@ c.Header("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 1. *预检请求图解*
 ![cors复杂跨域请求和预检请求](../../static/images/cors复杂跨域请求和预检请求.png)
 2. *预检后的复杂跨域请求图解*
-![[Pasted image 20260914222752.png]]
+![复杂跨域请求处理](../../static/images/复杂跨域请求处理.png)
 
 以上图中的请求头，服务器必须添加，才能实现复杂跨域请求
 ```go
