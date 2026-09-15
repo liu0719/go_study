@@ -9,6 +9,7 @@ git config --global http.proxy http://127.0.0.1:10808   # 开梯子后恢复,端
 ```
 ## git文件忽略跟踪
 在跟目录`.git`同级文件夹下新建`.gitignore`在该文件中配置要忽略的文件和文件夹
+
 > eg：
 ```gitignore
 # 文件夹名，也可以用路径名
