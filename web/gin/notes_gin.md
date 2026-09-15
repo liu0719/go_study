@@ -876,7 +876,7 @@ func main() {
 
 请求头请求时会携带着origin
 ![[请求头中的origin.png]]
-我们就需要在中间件中（在响应发送前）给响应头加上，`http://127.0.0.1:5500`可以换为任何源，`*`则表示允许跨域
+我们就需要在中间件中（在响应发送前）给响应头加上，`http://127.0.0.1:5500`可以换为任何源，`*`则表示允许跨域，这就足以处理简单请求。
 ```go
 c.Header("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 ```
@@ -920,10 +920,15 @@ c.Header("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 ```
 
 [go处理跨域具体案例](./15.cors跨域问题/cors.go)
-可以封装为一个中间件，，也就是cors包
+可以封装为一个中间件，也就是cors包
 ```bash
 go get github.com/gin-contrib/cors
 ```
+这个包内封装了cors规则，可以自定义设置跨域问题，也不用专门为预检设置options.
 
+**注意点**:浏览器的某些 *扩展*  可能会修改请求头的origin,如果出错要检查，排除。
+
+具体的语法:
+[cors包使用案例](../gin/15.cors跨域问题/cors.go)
 
 ---

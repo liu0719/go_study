@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- 1.点击button触发getTeacher,去创建script -->
+    <button onclick="getTeacher()">点我获取老师</button>
+    <div id="hello"> </div>
+    <script type="text/javascript">
+        // 5.这里提前准好函数，用来提供给后端返回时自动调用，来达成对应的现实目的。
+        function showdata(data){
+            const div=document.getElementById("hello")
+            div.innerHTML ='<h3>返回的JSON数据：</h3>' +
+                                  '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        }
+        // 2.getTeacher会创建script标签来给后端发请求
+        function getTeacher(){
+            const script=document.createElement('script')
+            // 3.这里设置一个定时器，onload代表加载完就移除script这个标签。防止对页面元素产生影响
+            script.onload=()=>{
+                script.remove()
+            }
+            // 4.加src属性，会自动给后端发请求，以参数的形式传给后端已经准备好的函数名。
+            script.src="http://127.0.0.1/teacher?func_name=showdata"
+            document.body.appendChild(script)
+        }
+    </script>
+
+
+
+    <!-- 以下仅为分析过程 -->
+
+    <script>
+        // 4.这是提前写好的函数，等到后端把函数名加数据返回给前端的script标签，会按函数名自动调已经写好的callback
+        // 5.这样就实现了跨域访问。
+        function callback(data){
+            console.log("callback被调用了",data)
+        }
+    </script>
+    <!-- 1.标签发的请求不会被跨域限制 -->
+     <!-- 2.返回的内容会被当成js语句来执行,也就是说，我们可以用后端来返回一个前端的函数名，前端会自动执行 -->
+      <!-- 3.这里不要写死，我们可以把函数名以参数的形式返回给后端，让后端返回来调用 -->
+    <script src="http://127.0.0.1/teacher?func_name=callback">
+
+    </script>
+</body>
+</html>
