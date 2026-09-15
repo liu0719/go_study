@@ -39,7 +39,7 @@ go version
 export GOPATH=$HOME/go
 
 # windows
-# 新建GOPATH,不要在盘
+# 新建GOPATH,不要在c盘
 # 将`%GOPATH%/bin`加到环境变量内
 ```
 
