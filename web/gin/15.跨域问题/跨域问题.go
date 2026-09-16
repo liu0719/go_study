@@ -2,13 +2,17 @@ package main
 
 import (
 	"encoding/json"
+	_ "fmt"
+	"net/http/httputil"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
-// 这种中间件已经有人封装了，就是cors包
+// 1.这种中间件已经有人封装了，就是cors包
 func AddcorsHeader(c *gin.Context) {
 
 	// http响应头必须要在发送响应内容前设置。
@@ -22,6 +26,36 @@ func AddcorsHeader(c *gin.Context) {
 	c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization,school")           //添加允许跨境的自定义请求头
 	c.Header("Access-Control-Max-Age", "10000")                                              //设置多长时间内不需要再预检
 }
+func ProxyMiddleWare(c *gin.Context) {
+	// 拦截预检请求
+	// if c.Request.Method == "OPTIONS" {
+	// 	c.AbortWithStatus(204)
+	// 	return
+	// }
+	// 转发地址
+	target, _ := url.Parse("https://www.toutiao.com/")
+	// 造一个代理
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	// 中间件处理逻辑,不是/api开头的请求直接放给后面的业务
+	if !strings.HasPrefix(c.Request.URL.Path, "/api") {
+		c.Next()
+		return
+	}
+
+	// 代理逻辑,api是我们自己加的，要去掉，否则真正的服务器收不到请求
+	c.Request.URL.Path = strings.TrimPrefix(c.Request.URL.Path, "/api")
+	// 清空可能存在的原始未解码枯井。防止覆盖上一条的修改
+	c.Request.URL.RawPath = ""
+	// 将host头换成目标域名，才不会识别为403
+	c.Request.Host = "www.toutiao.com"
+	// 删掉来源标识头，骗过头条的跨域/WAF 检查。
+	//浏览器发跨域请求时会自动带 Origin,反向代理默认原样透传所有请求头，不替你清掉这个。
+	// 因此要删除
+	c.Request.Header.Del("Origin")
+	// 转发,servehttp需要的参数可以直接喂进去
+	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
 func main() {
 	r := gin.Default()
 
@@ -42,6 +76,12 @@ func main() {
 	config.MaxAge = time.Second * 10
 	r.Use(cors.New(config))
 
+	// 3.自己设置代理转发
+	r.Use(ProxyMiddleWare)
+	r.LoadHTMLFiles("15.跨域问题/配置代理.html")
+	r.GET("", func(c *gin.Context) {
+		c.HTML(200, "配置代理.html", "")
+	})
 	// 简单请求
 	r.GET("/stu", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -70,7 +110,7 @@ func main() {
 		})
 	*/
 
-	// jsonp来处理跨域问题
+	//2. jsonp来处理跨域问题
 	teacher := gin.H{
 		"name":   "李老师",
 		"age":    30,

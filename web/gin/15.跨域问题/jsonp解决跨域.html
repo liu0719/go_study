@@ -28,6 +28,15 @@
             document.body.appendChild(script)
         }
     </script>
+    <!-- jQuery封装的包 -->
+     <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script>
+        // 函数名直接传入一个问号就行
+        $.getJSON('http://127.0.0.1/teacher?callback=?',(data)=>{
+            console.log(data);
+            
+        })
+    </script>
 
 
 

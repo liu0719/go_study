@@ -339,5 +339,4 @@ go get github.com/go-playground/validator/v10
 # 环境变量管理
 go get github.com/spf13/pflag
 ```
-
-祝你学习愉快！💪
+💪
