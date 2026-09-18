@@ -6,9 +6,8 @@
         <entry key="0">
           <value>
             <TabSessionState>
-              <option name="provider" value="claude" />
-              <option name="cwd" value="E:\Go\go_study\web\gin" />
-              <option name="model" value="claude-sonnet-5" />
+              <option name="provider" value="codex" />
+              <option name="model" value="gpt-6-astra" />
               <option name="permissionMode" value="default" />
             </TabSessionState>
           </value>

@@ -1,342 +1,332 @@
-# Gin进阶学习计划
+# Gin 进阶学习计划
 
-## 学习说明
-本文档列出了在掌握Gin基础后需要进阶学习的知识点，每个知识点都包含简要说明和学习资源链接。建议按顺序学习，每掌握一个知识点就创建对应的示例代码。
+> **目标**：后端实习（研一暑假，2027 年 7–8 月投递窗口）
+> **起点**：01–15 基础已过，CORS 已在 `15.跨域问题/` 完成
+> **本版调整**：原 14 项压缩为 8 项核心 + 1 项贯穿。原清单是按"库"列的，学完会认识一堆中间件但没有一个能交付的服务。本版改为**从 17 起，所有知识点都长进同一个项目**。
 
 ---
 
-## 1. CORS中间件
-**说明**：跨域资源共享是Web开发中必不可少的功能，允许前端应用访问不同域的后端API。
+## 进度总览
+
+| 阶段  | 内容                     | 目录                   | 预计耗时     |
+| --- | ---------------------- | -------------------- | -------- |
+| 0   | 工程基建（必须先做，半天）          | —                    | 0.5 天    |
+| 1-1 | Cookie 和 Session       | `16.cookie和session/` | 2 天      |
+| 1-2 | **JWT 认证**（从此进入项目骨架）   | `17.jwt认证/`          | 2 天      |
+| 1-3 | 错误处理和恢复                | 项目内                  | 1 天      |
+| 1-4 | 日志记录                   | 项目内                  | 1 天      |
+| 1-5 | 请求限流                   | 项目内                  | 0.5 天    |
+| 1-6 | 配置管理                   | 项目内                  | 0.5 天    |
+| 1-7 | **数据库集成**（含事务）         | `22.数据库集成/`          | 3 天      |
+| 1-8 | 优雅关闭                   | 项目内                  | 0.5 天    |
+| 贯穿  | 单元测试（每节顺手写，不单开）        | 各处 `_test.go`        | 每节 30 分钟 |
+| 2   | MySQL → Redis → Docker | 另起计划                 | 6 周      |
+| 3   | 算法（并行，每天一道）            | —                    | 6 个月     |
+
+---
+
+## 阶段 0：工程基建（必须先做，半天）
+
+这一步不做，后面所有东西都验不了。
+
+### 0.1 中文目录名让 `go build ./...` 全部失效
+已验证：`go build ./...` 对当前 16 个目录全部报 `malformed import path "github.com/liu0719/go_study/web/gin/01.原生_http库": invalid char '原'`。Go 把目录名当成 import path 的一部分，必须 ASCII。
+
+**后果**：`go vet`、`go test ./...`、`golangci-lint`、CI 全部不可用。现在能跑只是因为一直 `go run 单个文件.go`。
+
+**改法**：目录名改 ASCII，中文标题放进本文件（就是上面的总览表）。例如 `16.cookie和session/`、`17.jwt认证/` → `16-cookie-session/`、`17-jwt/`。已完成的 01–15 可以以后有空再改，不急。
+
+### 0.2 `go mod tidy`
+`go.mod` 里所有依赖（包括 gin 本身）都被标成 `// indirect`，还有 `mimetype`、`mongo-driver`、`quic-go` 这些代码里没用的残留。跑一次 `go mod tidy` 清掉。
+
+### 0.3 项目骨架（阶段 1 的第一件事）
+从 17 起不再写独立 `main` 脚本，建一个分层骨架：
+
+```
+ginapp/
+├── cmd/server/main.go      // 只负责启动和优雅关闭
+├── internal/
+│   ├── router/router.go    // 路由注册，不写业务
+│   ├── handler/            // 只解析请求和组装响应，不碰业务
+│   ├── service/            // 业务逻辑
+│   └── middleware/         // JWT、限流、日志、CORS、错误恢复
+├── configs/config.yaml
+└── pkg/response/           # 从现有 res/enter.go 挪过来
+```
+
+16 还是单文件练手没问题，17 开始往这个骨架里长。
+
+---
+
+## 阶段 1：Gin 进阶（8 项核心）
+
+---
+
+### 1. Cookie 和 Session 处理
+**说明**：理解凭据的两条路线——服务端查表（有状态）vs 凭据自带签名（无状态）。这一节是 17 的地基。
 
 ### 学习资源：
-- [Gin CORS中间件官方文档](https://github.com/gin-contrib/cors)
-- [MDN - CORS详解](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS)
+- [Go Cookie 官方文档](https://pkg.go.dev/net/http#Cookie)
+- [Gin Cookie 使用教程](https://gin-gonic.com/zh-cn/docs/examples/cookie/)
+- [RFC 6265（Cookie 规范）](https://httpwg.org/specs/rfc6265.html)
+- 现有材料：[`../../教学/16.cookie和session处理/Cookie和Session处理.go`](../../教学/16.cookie和session处理/Cookie和Session处理.go)（三种方案对比 + 手写签名 token + 双实例丢登录态复现，可直接用，注意它在 go.mod 外面，`go run` 单文件运行）
 
 ### 关键知识点：
-- 配置允许的源、方法、头部
-- 预检请求处理
-- 凭据（Credentials）支持
+- `Set-Cookie` 每个属性都是考点：`Path` / `MaxAge` / `Domain` / `HttpOnly` / `Secure` / `SameSite`
+- `MaxAge` 三种取值语义完全不同：`-1` 立即删除、`0` 会话 cookie、正数 持久化
+- Session 的本质：cookie 里只放无意义的 sessionId，真数据在服务端
+- 三种方案对比：裸 Cookie（不安全）/ Session（能踢人，多实例要共享存储）/ 签名 Token（无状态，踢不掉）
+
+### 验收标准：
+能讲清"为什么本地 `Secure=true` 会写了带不回来"、"为什么跨站请求带不上 cookie"、"多实例下 Session 为什么会随机丢登录态"。三个都是能复现的坑，不是背结论。
 
 ### 实践建议：
-创建`15.CORS中间件/`目录，实现CORS配置示例
+把三种方案做成一个演示服务，用一个 HTML 页面点按钮 + F12 看真实报文。
 
 ---
 
-## 2. Cookie和Session处理
-**说明**：Web应用中常用的用户状态管理方式，用于保持用户登录状态等。
+### 2. JWT 认证
+**说明**：本节起，所有内容都长进阶段 0.3 的项目骨架里。
 
 ### 学习资源：
-- [Go Cookie官方文档](https://pkg.go.dev/net/http#Cookie)
-- [Gin Cookie使用教程](https://gin-gonic.com/zh-cn/docs/examples/cookie/)
+- [JWT 官方规范 RFC 7519](https://www.rfc-editor.org/rfc/rfc7519)
+- [jwt.io（在线解 token）](https://jwt.io/)
+- [golang-jwt/jwt v5](https://github.com/golang-jwt/jwt)
+- [Gin JWT 示例](https://gin-gonic.com/zh-cn/docs/examples/jwt-authentication/)
 
 ### 关键知识点：
-- Cookie的读写、过期时间、域名、路径设置
-- Session中间件的选择和使用
-- 安全Cookie设置
+- 三段结构：Header / Payload / Signature，前两段是 base64url 编码**不是加密**
+- 签名校验：签名是对 payload 算的，改 payload 就验不过
+- 密钥泄露 = 攻击者可自行签发任意 token
+- **刷新机制**：access token（短）+ refresh token（长，存服务端）
+- **撤销问题**：无状态 token 无法主动失效，三种解法——短有效期 + refresh、服务端存 token 版本号、黑名单
+
+### 验收标准：
+能回答"JWT 怎么主动踢人下线"，并且能实现其中至少一种方案。这是本节真正的考点，`jwt.New()` 只是手段。
 
 ### 实践建议：
-创建`16.Cookie和Session/`目录，实现用户登录状态管理示例
+实现登录 / 刷新 / 登出 / 权限校验四个接口，登出必须真的能让旧 token 失效。
 
 ---
 
-## 3. JWT认证
-**说明**：现代Web应用最常用的身份验证方式，基于Token的无状态认证。
+### 3. 错误处理和恢复
+**说明**：Gin 的 `gin.Default()` 自带 `Recovery()`，但捕获 panic 不等于错误处理。
 
 ### 学习资源：
-- [JWT.io官方网站](https://jwt.io/)
-- [Golang JWT库](https://github.com/golang-jwt/jwt)
-- [JWT认证教程](https://gin-gonic.com/zh-cn/docs/examples/jwt-authentication/)
+- [Go 错误处理最佳实践](https://go.dev/blog/error-handling-and-go)
+- [Gin 中间件开发](https://gin-gonic.com/zh-cn/docs/examples/custom-middleware/)
 
 ### 关键知识点：
-- JWT结构（Header, Payload, Signature）
-- Token生成和验证
-- 中间件集成
-- 刷新机制
+- `panic` / `recover` 的边界，为什么不能在 goroutine 里靠主流程 recover
+- 业务错误 vs 系统错误的区分，错误码标准化
+- 统一错误响应格式，错误日志不要直接返回给前端
+- 包装错误：`fmt.Errorf("...: %w", err)` 和 `errors.Is/As`
+
+### 验收标准：
+项目里有一个全局错误中间件，handler 不再各自 `c.JSON` 拼错误响应。
 
 ### 实践建议：
-创建`17.JWT认证/`目录，实现完整的JWT认证系统
+定义 `errors` 包 + `response` 包（现有 `res/enter.go` 挪过来），handler 只 `return err`。
 
 ---
 
-## 4. 文件上传（进阶）
-**说明**：更完整的文件上传功能，包括文件类型验证、大小限制、文件重命名等。
-
+### 4. 日志记录
 ### 学习资源：
-- [Gin文件上传文档](https://gin-gonic.com/zh-cn/docs/examples/multipart-upload/)
-- [文件类型验证](https://github.com/gabriel-vasile/mimetype)
+- [Zap](https://go.uber.org/zap)
+- [Logrus](https://github.com/sirupsen/logrus)
+- [Gin 日志中间件](https://github.com/gin-gonic/gin/tree/master/examples/basic/logger)
 
 ### 关键知识点：
-- 文件类型验证
-- 文件大小限制
-- 文件存储策略
-- 文件名处理（防止冲突、安全过滤）
-- 批量上传
+- 日志分级：Debug / Info / Warn / Error 各自的语义
+- 结构化日志（字段化）vs 字符串拼接，为什么后者在排查时不可用
+- 请求日志中间件：traceId 贯穿一次请求
+- 日志输出到文件 + 轮转
 
-### 实践建议：
-创建`18.文件上传进阶/`目录，实现完整的文件上传系统
+### 验收标准：
+能按 traceId 把一次请求的所有日志串起来。
 
 ---
 
-## 5. 错误处理和恢复
-**说明**：构建健壮的应用，需要完善的错误处理和panic恢复机制。
-
+### 5. 请求限流
 ### 学习资源：
-- [Go错误处理最佳实践](https://go.dev/blog/error-handling-and-go)
-- [Gin中间件开发](https://gin-gonic.com/zh-cn/docs/examples/custom-middleware/)
+- [ulule/limiter v3](https://github.com/ulule/limiter/v3)
+- [令牌桶 / 漏桶算法](https://www.geeksforgeeks.org/sliding-window-algorithm-for-ratelimiting/)
 
 ### 关键知识点：
-- 自定义错误响应格式
-- Panic捕获和恢复
-- 错误日志记录
-- 错误码标准化
+- 固定窗口 / 滑动窗口 / 令牌桶三种策略的差异
+- 按 IP 还是按用户限流，单机 map 在多实例下失效
+- 限流响应：`429 Too Many Requests` + `Retry-After`
+
+### 验收标准：
+能画出令牌桶状态变化，并说明"为什么固定窗口在窗口边界会放过 2 倍流量"。
 
 ### 实践建议：
-创建`19.错误处理/`目录，实现全局错误处理中间件
+手写一个令牌桶中间件（20 行左右），再对比 limiter 库，理解库替你做了什么。
 
 ---
 
-## 6. 日志记录
-**说明**：结构化的日志记录对调试和监控至关重要。
-
+### 6. 配置管理
 ### 学习资源：
-- [Zap日志库](https://go.uber.org/zap)
-- [Logrus日志库](https://github.com/sirupsen/logrus)
-- [Gin日志中间件](https://github.com/gin-gonic/gin/tree/master/examples/basic/logger)
+- [Viper](https://github.com/spf13/viper)
+- [Go os 环境变量](https://pkg.go.dev/os#Environ)
 
 ### 关键知识点：
-- 日志格式配置
-- 不同级别的日志（Debug, Info, Warn, Error）
-- 请求日志中间件
-- 日志输出到文件
+- YAML / JSON / TOML 配置加载
+- 环境变量覆盖配置（十二要素应用里"配置在环境里"）
+- 配置分层：本地默认值 < 配置文件 < 环境变量
+- 启动时校验配置合法性，缺字段直接 fail fast
 
-### 实践建议：
-创建`20.日志记录/`目录，集成结构化日志到Gin应用
+### 验收标准：
+同一份代码能用不同配置跑在不同端口，且配置错误在启动时就报错而不是运行时报错。
 
 ---
 
-## 7. 请求限流
-**说明**：防止API被滥用，保护服务器资源。
-
+### 7. 数据库集成
 ### 学习资源：
-- [Gin Rate Limiter中间件](https://github.com/ulule/limiter/v3)
-- [限流算法介绍](https://github.com/ulule/limiter#strategies)
+- [GORM 文档](https://gorm.io/zh_CN/)
+- [Gin + GORM 示例](https://gorm.io/zh_CN/docs/gin.html)
+- [Go database/sql](https://pkg.go.dev/database/sql)
 
 ### 关键知识点：
-- 限流策略（固定窗口、滑动窗口、令牌桶）
-- 基于IP或用户的限流
-- 限流响应处理
+- 连接池配置：`SetMaxOpenConns` / `SetMaxIdleConns` / `SetConnMaxLifetime`，不配会踩连接耗尽
+- 模型定义与自动迁移
+- CRUD 与查询构造（`Where` / `Joins` / `Preload`）
+- **事务**：`Transaction` 回调、`SavePoint`、事务里出错要 `Rollback`
+- N+1 查询问题与 `Preload` 解决
+- 索引对查询计划的影响（配合 MySQL 学习）
+
+### 验收标准：
+写一个必须回滚的场景（转账或库存扣减），并用单元测试覆盖"第二步失败则第一步不生效"。CRUD 本身不是考点，**一致性才是**。
 
 ### 实践建议：
-创建`21.请求限流/`目录，实现API限流中间件
+这一节值得单独开目录 `22.数据库集成/`，因为它是项目的主干。
 
 ---
 
-## 8. 配置管理
-**说明**：使用配置文件管理应用设置，支持不同环境。
-
+### 8. 优雅关闭
 ### 学习资源：
-- [Viper配置库](https://github.com/spf13/viper)
-- [环境变量处理](https://pkg.go.dev/os)
+- [Go 信号处理](https://pkg.go.dev/signal)
+- [Gin 优雅关闭示例](https://github.com/gin-gonic/examples/tree/master/graceful-shutdown)
 
 ### 关键知识点：
-- 配置文件格式（JSON, YAML, TOML）
-- 环境变量支持
-- 配置热重载
-- 不同环境的配置管理
+- `os/signal` 捕获 `SIGTERM` / `SIGINT`
+- `http.Server.Shutdown(ctx)` 的超时语义
+- 请求处理超时：`context.WithTimeout`
+- 资源清理顺序：停止接新请求 → 等存量请求完成 → 关连接池
 
-### 实践建议：
-创建`22.配置管理/`目录，实现配置管理系统
+### 验收标准：
+`Ctrl+C` 时正在处理的请求不会被掐断，日志里能看到"正在等待 N 个请求完成"。
 
 ---
 
-## 9. 数据库集成
-**说明**：与数据库的集成，包括ORM和原生SQL操作。
+### 贯穿项：单元测试
+不单开一节，每节写 2–3 个用例即可。
+- [Go Testing 官方教程](https://go.dev/doc/tutorial/testing-and-benchmarking)
+- [Gin 测试示例（httptest）](https://github.com/gin-gonic/examples/tree/master/test)
+- 表驱动测试、`httptest.NewRecorder`、路由用 `r.ServeHTTP` 直接驱动
 
-### 学习资源：
-- [GORM](https://gorm.io/zh_CN/)
-- [Go SQL驱动](https://pkg.go.dev/database/sql)
-- [Gin + GORM教程](https://gorm.io/zh_CN/docs/gin.html)
-
-### 关键知识点：
-- 数据库连接池配置
-- 模型定义和迁移
-- CRUD操作
-- 事务处理
-- 查询优化
-
-### 实践建议：
-创建`23.数据库集成/`目录，实现完整的CRUD操作
+已有手感参考：[07.原始内容/test_body_read.go](07.原始内容/test_body_read.go)。
 
 ---
 
-## 10. WebSocket支持
-**说明**：实现实时通信功能，如聊天室、实时通知等。
+## 阶段 2：存储与部署（另起计划文档）
 
-### 学习资源：
-- [Gin WebSocket示例](https://github.com/gin-gonic/examples/tree/master/websocket)
-- [Go WebSocket库](https://github.com/gorilla/websocket)
+按序，不要跳：
 
-### 关键知识点：
-- WebSocket连接建立
-- 消息发送和接收
-- 广播和房间机制
-- 连接管理
-
-### 实践建议：
-创建`24.WebSocket/`目录，实现实时聊天应用
+1. **MySQL**：索引与 B+ 树、事务隔离级别、锁（行锁 / 间隙锁）、慢查询与 `EXPLAIN`。面试八股重灾区，和 7 的事务练习是同一件事的两面
+2. **Redis**：五种数据结构的使用场景、过期策略、缓存三大问题（穿透 / 击穿 / 雪崩）、把 Session 从内存挪到 Redis（正好接 1 的多实例问题）
+3. **Docker**：Dockerfile、容器化部署自己的项目、`docker-compose` 起 MySQL + Redis + 服务
 
 ---
 
-## 11. API文档自动生成
-**说明**：使用Swagger/OpenAPI自动生成API文档。
+## 阶段 3：算法（并行，从第 1 天开始）
 
-### 学习资源：
-- [Swaggo/Swagger](https://github.com/swaggo/swagger)
-- [Swaggo Gin中间件](https://github.com/swaggo/gin-swagger)
+这是硬门槛，和框架能力无关。
 
-### 关键知识点：
-- 注解方式定义API
-- 自动生成文档
-- Swagger UI集成
-
-### 实践建议：
-创建`25.API文档/`目录，实现自动生成的API文档
+- 每天一道 LeetCode，目标 300 道左右（中等难度为主）
+- 顺序：数组 / 双指针 → 哈希 → 字符串 → 链表 → 二叉树 → 回溯 / 动态规划 → 栈与队列
+- 同一道题三天后回看，能独立重写才算过
 
 ---
 
-## 12. 单元测试
-**说明**：编写单元测试确保代码质量。
+## 时间线
 
-### 学习资源：
-- [Go Testing官方文档](https://go.dev/doc/tutorial/testing-and-benchmarking)
-- [Gin测试工具](https://github.com/gin-gonic/examples/tree/master/test)
+| 时间 | 内容 |
+|---|---|
+| 2026-09-18 ~ 09-20 | 阶段 0 工程基建 + Cookie/Session |
+| 2026-09-21 ~ 10-20 | JWT → 错误处理 → 日志 → 限流 → 配置（全部长进项目骨架） |
+| 2026-10-21 ~ 11-15 | 数据库（含事务）+ 优雅关闭，Gin 部分收尾 |
+| 2026-11-16 ~ 2027-01-31 | MySQL |
+| 2027-02-01 ~ 02-28 | Redis + Docker |
+| 2027-03-01 ~ 06-30 | 项目打磨 + 简历 + 算法冲刺 |
+| 2027-07 ~ 08 | 投递 |
 
-### 关键知识点：
-- 单元测试编写
-- 表驱动测试
-- HTTP测试
-- Mock测试
-
-### 实践建议：
-创建`26.单元测试/`目录，为之前的示例添加测试用例
+算法从 2026-09-18 起并行，不断档。
 
 ---
 
-## 13. 优雅关闭
-**说明**：确保应用能够安全关闭，处理未完成的请求。
+## 实习水平的验收标准
 
-### 学习资源：
-- [Go信号处理](https://pkg.go.dev/signal)
-- [Gin优雅关闭示例](https://github.com/gin-gonic/examples/tree/master/graceful-shutdown)
+学完以上内容只是**有资格进面**。实际录用看四样：
 
-### 关键知识点：
-- 信号捕获
-- 请求超时设置
-- 资源清理
-- 优雅等待
+1. **一个能讲 30 分钟的项目**——不是"我用 gin 做了个接口"，而是"我在哪里做了取舍、为什么、出问题怎么查的"。现在 `15.跨域问题/跨域问题.go` 里关于 `Origin` / `RawPath` / `Host` 那段注释就是这类素材，多攒
+2. **Go 语言本身**：goroutine / channel、GMP 调度、concurrent map 的坑、`panic/recover` 边界、GC 三色标记。框架都会但语言说不清，一面就露
+3. **数据库八股**：MySQL 索引与事务隔离、Redis 过期与缓存三大问题
+4. **简历 + 投递时机**
 
-### 实践建议：
-创建`27.优雅关闭/`目录，实现优雅关闭功能
+选题建议：不要做"用户管理系统"。做研究方向相关的——实验数据管理、模型评测结果采集与对比。面试官看到项目内容和你的课题能对上，是白送的加分项。
 
 ---
 
-## 14. 监控和健康检查
-**说明**：应用健康状态检查和监控指标收集。
+## 暂缓学习的项
 
-### 学习资源：
-- [Prometheus Go客户端](https://github.com/prometheus/client_golang)
-- [健康检查端点设计](https://cloud.google.com/run/docs/tutorials/health-check)
+不是没用，是现在没有用例。有明确需求再补。
 
-### 关键知识点：
-- /health端点实现
-- 指标收集
-- 服务状态检查
-- 监控数据可视化
-
-### 实践建议：
-创建`28.监控健康/`目录，实现健康检查和监控
+- **文件上传进阶**（类型校验 / 大小限制 / 存储策略）——做需要传文件的业务时再补
+- **WebSocket**——没有实时推送用例时纯消耗
+- **API 文档 / Swagger**（[swaggo/swag](https://github.com/swaggo/swag) + [gin-swagger](https://github.com/swaggo/gin-swagger)）——需要把 API 交给别人对接时再补
+- **Prometheus 监控 / 健康检查**——没有真实部署就上不了手
 
 ---
-
-## 学习路线图
-
-### 初级进阶（1-5）
-1. CORS中间件
-2. Cookie和Session
-3. JWT认证
-4. 文件上传进阶
-5. 错误处理和恢复
-
-### 中级进阶（6-10）
-6. 日志记录
-7. 请求限流
-8. 配置管理
-9. 数据库集成
-10. WebSocket支持
-
-### 高级进阶（11-14）
-11. API文档自动生成
-12. 单元测试
-13. 优雅关闭
-14. 监控和健康检查
-
-## 学习建议
-
-1. **循序渐进**：按照顺序学习，掌握一个再学习下一个
-2. **动手实践**：每个知识点都要亲手编写代码
-3. **阅读源码**：阅读相关库的源码，理解实现原理
-4. **做笔记**：记录关键点和遇到的问题
-5. **项目实践**：学完后尝试构建一个完整的项目
 
 ## 常用工具库
 
-### 必备工具
 ```bash
-# JWT
+# 认证
 go get github.com/golang-jwt/jwt/v5
 
 # CORS
 go get github.com/gin-contrib/cors
 
-# 文件类型检测
-go get github.com/gabriel-vasile/mimetype
-
 # 日志
 go get go.uber.org/zap
 
-# 配置管理
+# 配置
 go get github.com/spf13/viper
-
-# ORM
-go get gorm.io/gorm
-
-# WebSocket
-go get github.com/gorilla/websocket
-
-# API文档
-go get github.com/swaggo/swagger
-go get github.com/swaggo/gin-swagger
-go get github.com/swaggo/files
 
 # 限流
 go get github.com/ulule/limiter/v3
 
-# 监控
-go get github.com/prometheus/client_golang
-```
+# 数据库
+go get gorm.io/gorm
+go get gorm.io/driver/mysql
 
-### 可选工具
-```bash
 # 缓存
-go get github.com/patrickmn/go-cache
+go get github.com/redis/go-redis/v9
 
-# 任务队列
-go get github.com/go-redis/redis/v8
+# 文件类型检测（暂缓项用）
+go get github.com/gabriel-vasile/mimetype
 
-# 验证器
+# 参数校验
 go get github.com/go-playground/validator/v10
-
-# 环境变量管理
-go get github.com/spf13/pflag
 ```
-💪
+
+---
+
+## 学习建议
+
+1. **从 17 起只往一个项目里长**，不要再造独立 `main` 脚本
+2. **每节写 2–3 个测试**，不单开测试节
+3. **读源码**：gin 的 `Context.Next()` / `Abort()`、validator 的 `FieldLevel`、httputil 的反向代理，这三个读透比多学两个中间件有用
+4. **每个知识点都要能复现一个坑**，而不是背结论
+5. 完成后把 `res/enter.go` 里的历史问题修掉：`Fail()` 收了 `Code` 参数却固定返回 `0`（失败响应也会报成功码）、`FailWithMsg` 硬编码 `1001`（权限错误）语义不符
