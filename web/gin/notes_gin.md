@@ -919,7 +919,7 @@ c.Header("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
     c.Header("Access-Control-Max-Age", "7200")
 ```
 
-[go处理跨域具体案例](./15.cors跨域问题/cors.go)
+[go处理跨域具体案例](./15.cross_domain_issues/跨域问题.go)
 可以封装为一个中间件，也就是cors包
 ```bash
 go get github.com/gin-contrib/cors
@@ -973,5 +973,13 @@ c.SetCookie(name string, value string, maxAge int, path string, domain string, s
 **token流程**当服务器收到浏览器传过来的 token 时，它会首先取出 token 中的 header + payload，根据密钥生成签名，然后再与 token 中的签名比对，如果成功则说明签名是合法的，即 token 是合法的。而且你会发现 payload 中存有我们的 userId，所以拿到 token 后直接在 payload 中就可获取 userid，避免了像 session 那样要从 redis 去取的开销。
 
 这种方式非常微妙，只要服务器保证密钥不泄露，那这个token就是安全的
+
+[cookie,session,token示例](/16.cookie_session_token/main.go)
+## 注意！
+运行时不要只运行一个main.go文件，否则session,cookie,token中的函数，main是不知道的
+正确的应该打开这个文件夹，运行整个文件夹
+```bash
+go run .
+```
 
 
