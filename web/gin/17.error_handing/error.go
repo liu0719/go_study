@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // 1.和前端约定好错误码，用数字表示状态和前端约定好
@@ -58,7 +60,58 @@ func newBizErr(code int, usermsg string) *AppError {
 
 // 权限错误，这个需要手动设置401 | 403
 func newAuthErr(code int, usermsg string, status int) *AppError {
-
+	return &AppError{Code: code, UserMsg: usermsg, HTTPStatus: status}
 }
 
-// 3.
+// 系统错误,detail是可能是任何类型，直接转为字符串存起来
+func newSysErr(code int, usermsg string, detail any) *AppError {
+	return &AppError{
+		Code:       code,
+		UserMsg:    usermsg,
+		HTTPStatus: http.StatusInternalServerError,
+		Detail:     fmt.Sprintf("%v", detail),
+	}
+}
+
+// 3.哨兵错误+包装
+// errors.Is()判断错误是哪个
+// errors.As()判断错误链上有没有指定的错误类型
+var (
+	ErrUserNotFound = errors.New("用户不存在")
+	ErrDivByZero    = errors.New("除数不能为0")
+)
+
+// 带字段的错误类型，演示errors.As()
+type TimeOutErr struct {
+	Op    string        //超时操作是哪个
+	Limit time.Duration //上限是多少
+}
+
+func (e *TimeOutErr) Error() string {
+	return fmt.Sprintf("操作[%v]超时，上限为[%v]", e.Op, e.Limit)
+}
+
+// errors.Is()是靠对象的==来判断的，必须为同一对象
+// 所以这里取地址得到一个全局变量，而不是每次新建，每次新建的都会false
+var ErrRePoTimeout = &TimeOutErr{Op: "查询用户", Limit: 3 * time.Second}
+
+// 产生错误的底层
+func callRepo() error { return ErrRePoTimeout }
+
+// 中间包装错误的层，把底层错误包一层，再加上我当前层正在干什么
+// %w把底层错误包进去，erros.Is()和errors().As()就能顺着一路钻到底层
+// 而%s,%v只是把错误弄成字符串，错误链就断了，底层错误找不回来
+func callService() error {
+	return fmt.Errorf("创建订单失败,原因：[%w]", callRepo())
+}
+
+// 最上层，handler再包一层
+func handle() error {
+	return fmt.Errorf("创建订单失败，原因：[%w]", callService())
+}
+
+// 不要把错误当字符串塞进来，错误连就断了
+// 错误示范
+func callservice() error {
+	return fmt.Errorf("创建订单失败，原因：[%s]", callRepo().Error())
+}
